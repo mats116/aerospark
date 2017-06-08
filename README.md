@@ -38,6 +38,9 @@ $ spark-shell --master local[*] --jars target/scala-2.11/aerospike-spark-assembl
 ```
 Import the `com.aerospike.spark.sql._` package
 ```scala
+scala> import com.aerospike.spark._
+import com.aerospike.spark._
+
 scala> import com.aerospike.spark.sql._
 import com.aerospike.spark.sql._
 ```
@@ -56,11 +59,24 @@ scala> import com.aerospike.client.Value
 import com.aerospike.client.Value
 
 ```
+Set up spark configuration:
+```scala
+    import org.apache.spark.sql.{ SQLContext, SparkSession, SaveMode}
+    import org.apache.spark.SparkConf
+    val conf = new SparkConf().
+      setMaster("local[2]").
+      setAppName("Aerospike Tests for Spark Dataset").
+      set("aerospike.seedhost", "localhost").
+      set("aerospike.port",  "3000").
+      set("aerospike.namespace", "test").
+      set("stream.orig.url", "localhost")
+```
+
 Load some data into Aerospike with:
 ```scala
     val TEST_COUNT = 100
     val namespace = "test"
-    var client=AerospikeConnection.getClient(AerospikeConfig.newConfig("localhost",3000,1000))
+    var client=AerospikeConnection.getClient(AerospikeConfig(conf))
     Value.UseDoubleType = true
     for (i <- 1 to TEST_COUNT) {
       val key = new Key(namespace, "rdd-test", "rdd-test-"+i)
@@ -74,16 +90,6 @@ Load some data into Aerospike with:
 ```
 Try a test with the loaded data:
 ```scala
-    import org.apache.spark.sql.{ SQLContext, SparkSession, SaveMode}
-    import org.apache.spark.SparkConf
-    val conf = new SparkConf().
-      setMaster("local[2]").
-      setAppName("Aerospike Tests for Spark Dataset").
-      set("aerospike.seedhost", "localhost").
-      set("aerospike.port",  "3000").
-      set("aerospike.namespace", "test").
-      set("stream.orig.url", "localhost")
-      
     val session = SparkSession.builder().
       config(conf).
       master("local[*]").
@@ -91,14 +97,10 @@ Try a test with the loaded data:
       config("spark.ui.enabled", "false").
       getOrCreate()
     
-    val sqlContext = session.sqlContext
-    val thingsDF = sqlContext.read.
-      format("com.aerospike.spark.sql").
-      option("aerospike.set", "rdd-test").
-      load
-      
+    scala> val thingsDF = session.scanSet("rdd-test")
+    
     thingsDF.registerTempTable("things")
-    val filteredThings = sqlContext.sql("select * from things where one = 55")
+    val filteredThings = session.sql("select * from things where one = 55")
     val thing = filteredThings.first()
 ```
 
@@ -108,21 +110,12 @@ The Aerospike Spark connector provides functions to load data from Aerospike int
 #### Loading data
 
 ```scala
-    val thingsDF = sqlContext.read.
-      format("com.aerospike.spark.sql").
-      option("aerospike.set", "rdd-test").
-      load 
+    val thingsDF =session.scanSet("rdd-test")
 ```
 
-You can see that the read function is configured by a number of options, these are:
-- `format("com.aerospike.spark.sql")` specifies the function library to load the DataFrame.
-- `option("aerospike.set", "rdd-test")` specifies the Set to be used e.g. "rdd-test"
-Spark SQL can be used to efficently filter (where lastName = 'Smith') Bin values represented as columns. The filter is passed down to the Aerospike cluster and filtering is done in the server. Here is an example using filtering:
+You can see that the read function "scanSet" takes one parameter that specifies the Set to be used e.g. "rdd-test"
+Spark SQL can be used to efficiently filter (where lastName = 'Smith') Bin values represented as columns. The filter is passed down to the Aerospike cluster and filtering is done in the server. Here is an example using filtering:
 ```scala
-    val thingsDF = sqlContext.read.
-      format("com.aerospike.spark.sql").
-      option("aerospike.set", "rdd-test").
-      load 
     thingsDF.registerTempTable("things")
     val filteredThings = sqlContext.sql("select * from things where one = 55")
 ```
@@ -130,14 +123,13 @@ Spark SQL can be used to efficently filter (where lastName = 'Smith') Bin values
 Additional meta-data columns are automatically included when reading from Aerospike, the default names are:
 - `__key` the values of the primary key if it is stored in Aerospike
 - `__digest` the digest as Array[byte]
-- `__generation` the gereration value of the record read
+- `__generation` the generation value of the record read
 - `__expitation` the expiration epoch
-- `__ttl` the time to live value calcualed from the expiration - now
+- `__ttl` the time to live value calculated from the expiration - now
  
 These meta-data column name defaults can be be changed by using additional options during read or write, for example:
 ```scala
-    val thingsDF = sqlContext.read.
-      format("com.aerospike.spark.sql").
+    val thingsDF2 = session.aeroRead.
       option("aerospike.set", "rdd-test").
       option("aerospike.expiryColumn", "_my_expiry_column").
       load 
@@ -148,15 +140,11 @@ A DataFrame can be saved in Aerospike by specifying a column in the DataFrame as
 ##### Saving by Digest
 In this example, the value of the digest is specified by the "__digest" column in the DataFrame.
 ```scala
-    val thingsDF = sqlContext.read.
-      format("com.aerospike.spark.sql").
-      option("aerospike.set", "rdd-test").
-      load 
+    val thingsDF = session.scanSet("rdd-test")
   		
-    thingsDF.write.
+    thingsDF.write.aerospike.
       mode(SaveMode.Overwrite).
-      format("com.aerospike.spark.sql").
-      option("aerospike.set", "rdd-test").
+      setName("rdd-test").
       option("aerospike.updateByDigest", "__digest").
       save()                
 
@@ -190,13 +178,12 @@ In this example, the value of the primary key is specified by the "key" column i
           
       val inputRDD = sc.parallelize(rows)
       
-      val newDF = sqlContext.createDataFrame(inputRDD, schema)
+      val newDF = session.createDataFrame(inputRDD, schema)
   
-      newDF.write.
+      newDF.write.aerospike
         mode(SaveMode.Ignore).
-        format("com.aerospike.spark.sql").
-        option("aerospike.set", "rdd-test").
-        option("aerospike.updateByKey", "key").
+        setName("rdd-test").
+        key("key").
         save()       
 ```
 ##### Using TTL while saving 
