@@ -1,5 +1,6 @@
 # Aerospike Spark Connector
-The Aerospike spark connector provides features to represent data stored in Aerospike as a DataFrame in Spark.
+
+The Aerospike Spark Connector provides features to represent data stored in [Aerospike](http://www.aerospike.com/) NoSQL database as a DataFrame in Spark.
  
 Aerospike Spark Connector includes:
 - Reading from Aerospike to a DataFrame
@@ -10,33 +11,43 @@ Aerospike Spark Connector includes:
 
 The source code for this solution is available on GitHub at [https://github.com/aerospike/aerospark](https://github.com/aerospike/aerospark). SBT is the build tool and it will create a Uber (fat) jar as the final output of the build process. The jar will contain all the class files and dependencies.
 
-This Library requires Java JDK 7+ Scala 2.11, SBT 0.13, and Docker running locally in order to perform the tests
+This library requires Java JDK 7+, Scala 2.11, SBT 0.13, and Docker running locally in order to perform the tests.
 
-To build the Spark connector:
 Clone the [Aerospike Spark](https://github.com/aerospike/aerospark) repository using this command:
+
 ```bash
 $ git clone https://github.com/aerospike/aerospark
 ```
+
 After cloning the repository, build the uber jar using:
+
 ```bash
 $ sbt assembly
 ```
-Note that during the build, a number of unit tests are run, these tests will create a docker process automatically for an aerospike database. If you want to ignore the unit tests, use:
+
+Note that during the build, a number of unit tests are run that create a Docker process automatically for an Aerospike database. If you want to ignore the unit tests, use:
+
 ```bash
-$ sbt 'set test in assembly := {}' clean assembly
+$ sbt 'set test in assembly := {}' assembly
 ```
 
 On conclusion of the build, the uber JAR `aerospike-spark-assembly-<version>.jar` will be located in the subdirectory `target/scala-2.11`.
 
 ## Usage
-The assembled JAR can be used in any Spark application providing it's on the class path.
+
+The assembled JAR can be used in any Spark application.
+
 ### spark shell
+
 To use connector with the spark-shell, use the `--jars` command line option and include the path to the assembled JAR.
+
 Example:
+
 ```bash
-$ spark-shell --master local[*] --jars target/scala-2.11/aerospike-spark-assembly-1.2.jar
+$ spark-shell --jars target/scala-2.11/aerospike-spark-assembly-1.2.jar
 ```
-Import the `com.aerospike.spark.sql._` package
+
+Import the `com.aerospike.spark._` package
 ```scala
 scala> import com.aerospike.spark._
 import com.aerospike.spark._
@@ -44,8 +55,10 @@ import com.aerospike.spark._
 scala> import com.aerospike.spark.sql._
 import com.aerospike.spark.sql._
 ```
+
 and any Aerospike packages and classes. For example:
-```scala
+
+```
 scala> import com.aerospike.client.AerospikeClient
 import com.aerospike.client.AerospikeClient
 
@@ -86,9 +99,10 @@ Load some data into Aerospike with:
          new Bin("three", i.toDouble)
       )
     }
-
 ```
+
 Try a test with the loaded data:
+
 ```scala
     val session = SparkSession.builder().
       config(conf).
@@ -121,6 +135,7 @@ Spark SQL can be used to efficiently filter (where lastName = 'Smith') Bin value
 ```
 
 Additional meta-data columns are automatically included when reading from Aerospike, the default names are:
+
 - `__key` the values of the primary key if it is stored in Aerospike
 - `__digest` the digest as Array[byte]
 - `__generation` the generation value of the record read
@@ -128,6 +143,7 @@ Additional meta-data columns are automatically included when reading from Aerosp
 - `__ttl` the time to live value calculated from the expiration - now
  
 These meta-data column name defaults can be be changed by using additional options during read or write, for example:
+
 ```scala
     val thingsDF2 = session.aeroRead.
       option("aerospike.set", "rdd-test").
@@ -136,9 +152,13 @@ These meta-data column name defaults can be be changed by using additional optio
 ```
 
 #### Saving data
-A DataFrame can be saved in Aerospike by specifying a column in the DataFrame as the Primary Key or the Digest.
+
+A DataFrame can be saved to a Aerospike database by specifying a column in the DataFrame as the Primary Key or the Digest.
+
 ##### Saving by Digest
-In this example, the value of the digest is specified by the "__digest" column in the DataFrame.
+
+In this example, the value of the digest is specified by the `__digest` column in the DataFrame.
+
 ```scala
     val thingsDF = session.scanSet("rdd-test")
   		
@@ -147,10 +167,11 @@ In this example, the value of the digest is specified by the "__digest" column i
       setName("rdd-test").
       option("aerospike.updateByDigest", "__digest").
       save()                
-
 ```
-##### Saving by Key
+
+##### RDD Saving by Key
 In this example, the value of the primary key is specified by the "key" column in the DataFrame.
+
 ```scala
       import org.apache.spark.sql.types.StructType
       import org.apache.spark.sql.types.StructField
@@ -186,23 +207,27 @@ In this example, the value of the primary key is specified by the "key" column i
         key("key").
         save()       
 ```
+
 ##### Using TTL while saving 
+
 Time to live (TTL) can be set individually on each record. The TTL should be stored in a column in the DataSet before it is saved. 
 
 To enable updates to TTL, and additional option is specified:
+
 ```scala
-	option("aerospike.ttlColumn", "expiry")
+option("aerospike.ttlColumn", "expiry")
 ```
 ### Schema
-Aerospike is Schema-less and Spark DataFrames use a Schema. To facilitate the need for schema, the Aerospike spark connector samples 100 records, via a scan, and reads the Bin names and infers the Bin type.
+
+Aerospike is Schema-less but Spark's DataFrames require a schema. To facilitate the need for schema, the Aerospike Spark Connector samples 100 records, via a scan, and reads the `Bin` names and infers the `Bin` type.
 
 The number of records scanned can be changed by using the option:
 
 ```scala
-	option("aerospike.schema.scan", 20)
+option("aerospike.schema.scan", 20)
 ```
-Note: the schema is derived each time `load` is called. If you call `load` before the Aerospike namespace/set has any data, only the meta-data columns will be available.
 
+Note: the schema is derived each time `load` is called. If you call `load` before the Aerospike namespace/set has any data, only the meta-data columns will be available.
 
 ## Save mode reference
 
@@ -217,21 +242,19 @@ Append|UPDATE_ONLY
 
 Option|Description|Default value
 ------|-----------|-------------
-aerospike.seedhost|A host name or address of the cluster| "localhost"
-aerospike.port|Port of Aerospike| 3000
-aerospike.timeout|Timeout for all operations in milliseconds|1000
-aerospike.sendKey|If true, store the value of the primary key|false
 aerospike.commitLevel|Consistency guarantee when committing a transaction on the server|CommitLevel.COMMIT_ALL
-aerospike.generationPolicy|ow to handle record writes based on record generation|GenerationPolicy.NONE
-aerospike.namespace|Aerospike Namespace|"test"
-aerospike.set|Aerospike Set|no default
-aerospike.updateByKey|This option specifies that updates are done by key with the value in the column specified ```option("aerospike.updateByKey", "key")```|
+aerospike.digestColumn|The name of the digest column in the Data Frame| `__digest`
+aerospike.expiryColumn|The name of the expiry column in the Data Frame| `__expiry`
+aerospike.generationColumn|The name of the generation column in the Data Frame| `__generation`
+aerospike.generationPolicy|ow to handle record writes based on record generation| `GenerationPolicy.NONE`
+aerospike.keyColumn|The name of the key column in the Data Frame| `__key`
+aerospike.namespace|Aerospike Namespace| `test`
+aerospike.port|Port of Aerospike| 3000
+aerospike.schema.scan|The number of records to scan to infer schema| 100
+aerospike.seedhost|A host name or address of the cluster| `localhost`
+aerospike.sendKey| When enabled, store the value of the primary key| false
+aerospike.set|Aerospike Set| (empty)
+aerospike.timeout|Timeout for all operations in milliseconds| 1000
+aerospike.ttlColumn|The name of the TTL column in the Data Frame| `__ttl`
 aerospike.updateByDigest|This option specifies that updates are done by digest with the value in the column specified ```option("aerospike.updateByDigest", "Digest")```|
-aerospike.schema.scan|The number of records to scan to infer schema|100
-aerospike.keyColumn|The name of the key column in the Data Frame|"__key"
-aerospike.digestColumn|The name of the digest column in the Data Frame|"__digest"
-aerospike.expiryColumn|The name of the expiry column in the Data Frame|"__expiry"
-aerospike.generationColumn|The name of the generation column in the Data Frame|"__generation"
-aerospike.ttlColumn|The name of the TTL column in the Data Frame|"__ttl"
-
-
+aerospike.updateByKey|This option specifies that updates are done by key with the value in the column specified ```option("aerospike.updateByKey", "key")```|
