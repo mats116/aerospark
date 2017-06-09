@@ -44,10 +44,11 @@ To use connector with the spark-shell, use the `--jars` command line option and 
 Example:
 
 ```bash
-$ spark-shell --jars target/scala-2.11/aerospike-spark-assembly-1.2.jar
+$ spark-shell --jars target/scala-2.11/aerospike-spark-assembly-1.3.1.jar
 ```
 
 Import the `com.aerospike.spark._` package
+
 ```scala
 scala> import com.aerospike.spark._
 import com.aerospike.spark._
@@ -56,9 +57,9 @@ scala> import com.aerospike.spark.sql._
 import com.aerospike.spark.sql._
 ```
 
-and any Aerospike packages and classes. For example:
+and Aerospike packages and classes. For example:
 
-```
+```scala
 scala> import com.aerospike.client.AerospikeClient
 import com.aerospike.client.AerospikeClient
 
@@ -73,6 +74,7 @@ import com.aerospike.client.Value
 
 ```
 Set up spark configuration:
+
 ```scala
     import org.apache.spark.sql.{ SQLContext, SparkSession, SaveMode}
     import org.apache.spark.SparkConf
@@ -85,7 +87,8 @@ Set up spark configuration:
       set("stream.orig.url", "localhost")
 ```
 
-Load some data into Aerospike with:
+Load some data into Aerospike with java client:
+
 ```scala
     val TEST_COUNT = 100
     val namespace = "test"
@@ -111,7 +114,7 @@ Try a test with the loaded data:
       config("spark.ui.enabled", "false").
       getOrCreate()
     
-    scala> val thingsDF = session.scanSet("rdd-test")
+    val thingsDF = session.scanSet("rdd-test")
     
     thingsDF.registerTempTable("things")
     val filteredThings = session.sql("select * from things where one = 55")
@@ -155,7 +158,7 @@ These meta-data column name defaults can be be changed by using additional optio
 
 A DataFrame can be saved to a Aerospike database by specifying a column in the DataFrame as the Primary Key or the Digest.
 
-##### Saving by Digest
+##### Saving Dataframe by Digest
 
 In this example, the value of the digest is specified by the `__digest` column in the DataFrame.
 
@@ -169,7 +172,7 @@ In this example, the value of the digest is specified by the `__digest` column i
       save()                
 ```
 
-##### RDD Saving by Key
+##### Saving RDD by Key
 In this example, the value of the primary key is specified by the "key" column in the DataFrame.
 
 ```scala
@@ -179,6 +182,7 @@ In this example, the value of the primary key is specified by the "key" column i
       import org.apache.spark.sql.types.StringType
       import org.apache.spark.sql.DataFrame
       import org.apache.spark.sql.Row
+      import org.apache.spark.sql.SaveMode
        
       val schema = new StructType(Array(
           StructField("key",StringType,nullable = false),
@@ -201,7 +205,7 @@ In this example, the value of the primary key is specified by the "key" column i
       
       val newDF = session.createDataFrame(inputRDD, schema)
   
-      newDF.write.aerospike
+      newDF.write.aerospike.
         mode(SaveMode.Ignore).
         setName("rdd-test").
         key("key").
