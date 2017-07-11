@@ -172,7 +172,7 @@ In this example, the value of the digest is specified by the `__digest` column i
       save()                
 ```
 
-##### Saving RDD by Key
+##### Saving by Key
 In this example, the value of the primary key is specified by the "key" column in the DataFrame.
 
 ```scala
@@ -209,7 +209,21 @@ In this example, the value of the primary key is specified by the "key" column i
         mode(SaveMode.Ignore).
         setName("rdd-test").
         key("key").
-        save()       
+        save()
+```
+
+Persist dataset to aerospike.
+
+```scala
+	case class Person(name:String, age: Long, sex: String, ssn: String)
+    import session.implicits._
+    
+    Seq(
+        Person("Jimmy", 20L, "M", "444-55-5555"),
+        Person("Himmy", 21L, "M", "444-55-5556"),
+        Person("Limmy", 22L, "M", "444-55-5557"),
+        Person("Timmy", 23L, "M", "444-55-5558")
+        ).toDS().saveToAerospike("ssn")
 ```
 
 ##### Using TTL while saving 
