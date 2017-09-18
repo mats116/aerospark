@@ -15,7 +15,7 @@ parallelExecution in test := false
 libraryDependencies ++= Seq("org.apache.spark" %% "spark-core" % "1.6.0" % "provided",
 	"org.apache.spark" %% "spark-sql" % "1.6.0" % "provided",
 	"com.aerospike" % "aerospike-client" % "3.2.4",
-	"com.aerospike" % "aerospike-helper-java" % "1.0.6",
+	"com.aerospike" % "aerospike-helper-java" % "1.1",
 	"org.scalatest" %% "scalatest" % "2.2.1" % "test")
 
 resolvers ++= Seq("Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository")
@@ -39,7 +39,7 @@ assemblyMergeStrategy in assembly := {
           MergeStrategy.filterDistinctLines
         case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) =>
           MergeStrategy.filterDistinctLines
-        case _ => MergeStrategy.deduplicate
+        case _ => MergeStrategy.discard
       }
    case _ => MergeStrategy.first
 }
