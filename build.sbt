@@ -1,8 +1,6 @@
-import sbtassembly.MergeStrategy._
-
 name := "aerospike-spark"
 
-version := "1.1.5"
+version := "1.1.6"
 
 organization := "com.aerospike"
 
@@ -12,13 +10,12 @@ javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
 
 parallelExecution in test := false
 
-libraryDependencies ++= Seq("org.apache.spark" %% "spark-core" % "1.6.0" % "provided",
-	"org.apache.spark" %% "spark-sql" % "1.6.0" % "provided",
-	"com.aerospike" % "aerospike-client" % "3.2.4",
-	"com.aerospike" % "aerospike-helper-java" % "1.1",
+libraryDependencies ++= Seq("org.apache.spark" %% "spark-core" % "1.6.1" % "provided",
+	"org.apache.spark" %% "spark-sql" % "1.6.1" % "provided",
+	"com.aerospike" % "aerospike-client" % "4.0.8",
+	"com.aerospike" % "aerospike-helper-java" % "1.2.2",
+  "joda-time" % "joda-time" % "2.9.9",
 	"org.scalatest" %% "scalatest" % "2.2.1" % "test")
-
-resolvers ++= Seq("Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository")
 
 assemblyMergeStrategy in assembly := {
     case x if Assembly.isConfigFile(x) =>
